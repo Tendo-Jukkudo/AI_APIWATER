@@ -1,0 +1,12 @@
+22-Jan-21 14:50:52 - INFO - Request training Device:F17027
+22-Jan-21 14:50:53 - INFO - Data processing ...
+22-Jan-21 14:51:04 - INFO - Data processed
+22-Jan-21 14:51:05 - INFO - Data Checking ...
+22-Jan-21 14:51:05 - INFO - Good Data
+22-Jan-21 14:51:05 - INFO - Start Training...
+22-Jan-21 14:51:08 - INFO - 
+Epoch 00000: Learning rate is 0.0100.
+22-Jan-21 14:51:18 - WARNING - From /home/jukkudo/anaconda3/envs/ds/lib/python3.6/site-packages/tensorflow/python/ops/summary_ops_v2.py:1277: stop (from tensorflow.python.eager.profiler) is deprecated and will be removed after 2020-07-01.
+Instructions for updating:
+use `tf.profiler.experimental.stop` instead.
+22-Jan-21 14:54:22 - INFO - Training process stopped
