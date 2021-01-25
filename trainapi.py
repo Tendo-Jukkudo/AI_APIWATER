@@ -2,6 +2,9 @@ import subprocess
 from flask import Flask,request, jsonify
 from flask_restful import Api, Resource
 from flask_cors import CORS
+import tensorboard as tb
+from werkzeug import serving
+from werkzeug.middleware import dispatcher
 from webargs.flaskparser import parser, abort
 import urllib.request
 import json
@@ -30,6 +33,8 @@ url_get = 'http://hbqweblog.com/DAKWACO/stock/ai_get_data.php?'
 url_csv = 'http://sovigaz.hbqweblog.com/ai/tdata/'
 path_model = 'watermodel.py'
 train_status = False
+HOST = "0.0.0.0"
+PORT = 5000
 
 def download_url(url, save_path, chunk_size=128):
     r = requests.get(url, stream=True)
@@ -67,12 +72,10 @@ def send_ftp(folders_path,zipname,FTP_HOST,FTP_USER,FTP_PASS):
     # force UTF-8 encoding
     ftp.encoding = "utf-8"
     # //send file nen
-    filename = "some_file.txt"
     with open(zipname, "rb") as file:
         # use FTP's STOR command to upload the file
         ftp.storbinary(f"STOR {zipname}", file)
     # //return ketqua
-    os.remove(zipname)
 
 
 
@@ -101,7 +104,7 @@ def start_flaskapp(queue):
     global some_queue
     some_queue = queue
     API.add_resource(FractionsResource, "/")
-    serve(APP, host='0.0.0.0', port=5000, threads=2)
+    serve(APP, host=HOST, port=PORT, threads=2)
 
 def long_function():
     with ProcessPool(5) as pool:
@@ -277,7 +280,7 @@ class FractionsResource(Resource):
                 write_json(infor_status,path_task_manager)
                 logging.info("Proceed to send the file")
                 try:
-                    send_ftp(folders_path=["model","logs"],zipname="mnt/result_model.zip",
+                    send_ftp(folders_path=["model","logs"],zipname="result_model.zip",
                             FTP_HOST="hbqweblog.com",
                             FTP_USER="ftpuser",
                             FTP_PASS="Thehoang091184")
