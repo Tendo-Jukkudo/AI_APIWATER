@@ -139,7 +139,7 @@ def train_model(url_csv,save_name,type_data,row_infor,his,target,asixs,id_name,f
         
   path_f = "W"+save_name+".h5"
 
-  log_dir = "logs/fit/"+id_name+"/"+date_w
+  log_dir = "logs/fit/"+id_name+"/"+date_w+"/"+save_name
   tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
   path_checkpoint = os.path.join(path_w,path_f)
