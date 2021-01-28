@@ -44,6 +44,7 @@ def create_datatrain(url_data,s_row_nb,row_infor,asixs,past_history,future_targe
         count_nan = pd.Series(count_nan[count_nan == True].index)
 
         dataset_new = offset_insertdata(dataset_asfreq,count_nan,row_infor[1],type_date="D")
+        print(dataset_new)
         uni_data = np.array(dataset_new)
 
         data_mean = uni_data[:int(len(uni_data)*0.8)].mean(axis=0)
