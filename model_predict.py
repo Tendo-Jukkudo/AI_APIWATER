@@ -33,28 +33,28 @@ def futures_predict(input_data,type_data,path_weights,past_history,future_target
     predict_data.append(data_p) 
   return predict_data
 
-def run_prediction(type_feature,his,target,path_weight,url_get,f_ex,means,stds,mean_std=False):
+def run_prediction(type_feature,row_infor,his,target,path_weight,url_get,f_ex,means,stds,mean_std=False):
   step = 60/f_ex
   nb_past = his*24*step
   nb_future = target*24*step
   if(type_feature == 0):
-    logging.info('Predict Pressure Data')
+    logging.info('Predict '+row_infor[1]+' Data')
   else:
-    logging.info('Predict FlowF Data')
+    logging.info('Predict '+row_infor[2]+' Data')
 
   data_mean = means
   data_std = stds
   logging.info("Data loading ...")
-  df = pd.read_csv(url_get,parse_dates=['Datetime'],index_col='Datetime')
-  uni_data = df[['Pressure','FlowF']]
+  df = pd.read_csv(url_get,parse_dates=[row_infor[0]],index_col=row_infor[0])
+  uni_data = df[[row_infor[1],row_infor[2]]]
   logging.info("Data processing ...")
   dataset_duplicated = uni_data[~uni_data.index.duplicated()]
   dataset_asfreq=dataset_duplicated.asfreq(freq=str(f_ex)+"T")
 
-  count_nan = (dataset_asfreq["Pressure"].isnull())
+  count_nan = (dataset_asfreq[row_infor[1]].isnull())
   count_nan = pd.Series(count_nan[count_nan == True].index)
 
-  dataset_new = cd.offset_insertdata(dataset_asfreq,count_nan,"Pressure",type_date="D")
+  dataset_new = cd.offset_insertdata(dataset_asfreq,count_nan,row_infor[1],type_date="D")
   logging.info("Data Checking ...")
   datetime = list(map(str,dataset_new.index))
   nb_error = len(d_f.check_datestep(datetime,f_ex))
