@@ -10,6 +10,7 @@ from waitress import serve
 from multiprocessing import Process, Queue
 from concurrent.futures import TimeoutError
 from pebble import ProcessPool, ProcessExpired
+import logging
 import functools
 import numpy as np
 import model_predict
@@ -20,8 +21,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 some_queue = None
 
 url_model = 'http://hbqweblog.com/ai/model/watermodel.zip'
-url_get = 'http://hbqweblog.com/DAKWACO/stock/ai_get_data.php?'
-url_csv = 'http://hbqweblog.com/ai/tdata/'
+url_get = 'http://hbqweblog.com/ai/ai_get_data_by_time.php?'
+url_csv = 'http://sovigaz.hbqweblog.com/ai/tdata/'
 path_model = 'watermodel.py'
 
 class NumpyEncoder(json.JSONEncoder):
@@ -148,6 +149,14 @@ class FractionsResource(Resource):
                 return jsonify({'infor':datas})  
         except:
             return "System Error 404"
+    @APP.route('/sm/ai_console',methods=['GET'])
+    def ai_console():
+        clear_text = request.args.get('clear', default = 0, type = int)
+        if(clear_text == 1):
+            logging.FileHandler(filename="status/predict_status.log", mode='w')
+
+        predict_status = open("status/predict_status.log","r")
+        return "<pre>"+predict_status.read()+"</pre>"
 
     @APP.route('/sm/ai_run',methods=['GET'])
     def returnPredict():
@@ -155,19 +164,24 @@ class FractionsResource(Resource):
         id_device = request.args.get('ID', default = '', type = str)
         date = request.args.get('date', default = '', type = str)
         index = request.args.get('index', default = '', type = str)
+        logging.info("Request Predict Device:"+id_device)
 
         training_info_json_file = "model/about_model.json"
-        path_id_device = 'data/'+id_device
+        path_id_device = 'model/'+id_device
         check_id_device = os.path.exists(path_id_device)
 
         if(check_id_device == False):
-            return "Device ID "+id_device+" not be trainning"
+            return jsonify({"Device ID "+id_device+" not be trained"})
         else:
             url_getdata = url_get+'&dev_id='+id_device+'&date='+date
             url_getlink = url_csv+id_device+"/"
             data_link = url_getlink+"datalink.json"
-            r = requests.get(data_link)
-            data_links = r.json()
+            try:
+                r = requests.get(data_link)
+                data_links = r.json()
+            except:
+                return jsonify({'error':"Device ID does not exist"})
+
             sampling = data_links["sampling"]
                 
             with open(training_info_json_file) as json_file: 
@@ -207,7 +221,7 @@ class FractionsResource(Resource):
 
             if(predict == 1):
                 data_info_json_file = "data/about_data.json"
-                path_id = "model/"+id_device
+                path_id = "data/"+id_device
                 path_date_predict = "data/"+id_device+"/"+date+".json"
                 check_info_json_file = os.path.exists(data_info_json_file)
                 status = "running"
@@ -243,12 +257,19 @@ class FractionsResource(Resource):
                                                                     his=lin,target=lout,
                                                                     path_weight=path_w_p,url_get=url_getdata,
                                                                     means=mean_value,f_ex=sampling,stds=std_value,mean_std=False)
-                status = "done"
+                if(len(error_date) > 0):
+                    with open(data_info_json_file) as json_file: 
+                        data = json.load(json_file)
+                        temp = data['infor'] 
+                        get_status = [data_ for data_ in temp if data_['predictdate'] == date][0]
+                        get_status['status'] = "Error"
+                    write_json(data,data_info_json_file)
+                    return jsonify({'error_date':error_date})
                 with open(data_info_json_file) as json_file: 
                     data = json.load(json_file)
                     temp = data['infor'] 
                     get_status = [data_ for data_ in temp if data_['predictdate'] == date][0]
-                    get_status['status'] = status
+                    get_status['status'] = "done"
                 write_json(data,data_info_json_file)
 
                 data_out = json.dumps({'status':date,'error':error_date,'flow':forecast_flow,'Pressure':forecast_p},cls=NumpyEncoder) 
@@ -257,7 +278,11 @@ class FractionsResource(Resource):
         return "OK"
 
 if __name__ == "__main__":
-
+    date_strftime_format = "%d-%b-%y %H:%M:%S"
+    message_format = "%(asctime)s - %(levelname)s - %(message)s"
+    logging.basicConfig(filename="status/predict_status.log",
+                        format=message_format,datefmt=date_strftime_format,
+                        level=logging.INFO)
     q = Queue()
     p = Process(target=start_flaskapp, args=(q,))
     p.start()
