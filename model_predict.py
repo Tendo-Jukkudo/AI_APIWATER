@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import os
 import data_function as d_f
+import create_data as cd
+import logging
 
 def futures_predict(input_data,type_data,path_weights,past_history,future_target,STEP,mean,std,mean_std=False):
   data_mean = mean
@@ -32,26 +34,39 @@ def futures_predict(input_data,type_data,path_weights,past_history,future_target
   return predict_data
 
 def run_prediction(type_feature,his,target,path_weight,url_get,f_ex,means,stds,mean_std=False):
-
-  nb_past = his*24*4
-  nb_future = target*24*4
   step = 60/f_ex
+  nb_past = his*24*step
+  nb_future = target*24*step
+  if(type_feature == 0):
+    logging.info('Predict Pressure Data')
+  else:
+    logging.info('Predict FlowF Data')
 
   data_mean = means
   data_std = stds
+  logging.info("Data loading ...")
+  df = pd.read_csv(url_get,parse_dates=['Datetime'],index_col='Datetime')
+  uni_data = df[['Pressure','FlowF']]
+  logging.info("Data processing ...")
+  dataset_duplicated = uni_data[~uni_data.index.duplicated()]
+  dataset_asfreq=dataset_duplicated.asfreq(freq=str(f_ex)+"T")
 
-  r = requests.get(url_get)
-  df = pd.DataFrame(r.json())
-  feature_name = list(df.columns)
-  uni_data = df[feature_name[1:3]]
-  uni_data = np.array(uni_data)
-  if(mean_std==True):
-    uni_data = (uni_data - data_mean)/data_std
+  count_nan = (dataset_asfreq["Pressure"].isnull())
+  count_nan = pd.Series(count_nan[count_nan == True].index)
 
-  datetime = list(map(str,df[0]))
+  dataset_new = cd.offset_insertdata(dataset_asfreq,count_nan,"Pressure",type_date="D")
+  logging.info("Data Checking ...")
+  datetime = list(map(str,dataset_new.index))
   nb_error = len(d_f.check_datestep(datetime,f_ex))
+
+  uni_data_new = np.array(dataset_new)
+  if(mean_std==True):
+    uni_data_new = (uni_data_new - data_mean)/data_std
+
   if(nb_error == 0):
-    data_predict = futures_predict(input_data=uni_data,type_data=type_feature,
+    logging.info("Good Data")
+    logging.info("Start predict...")
+    data_predict = futures_predict(input_data=uni_data_new,type_data=type_feature,
                                     path_weights=path_weight,
                                     past_history=int(nb_past),future_target=int(nb_future),
                                     STEP=int(step),mean=data_mean,std=data_std,mean_std=mean_std)
@@ -59,7 +74,10 @@ def run_prediction(type_feature,his,target,path_weight,url_get,f_ex,means,stds,m
     data_json = d_f.datatime_json(Now_time,data_predict,f_ex)
     output = np.array(data_json)
     error_date = d_f.check_datestep(datetime,f_ex)
+    logging.info("Successfully Training Process")
   else:
+    logging.error("Data Error No: " +nb_error)
     error_date = d_f.check_datestep(datetime,f_ex)
     output = []
-  return output,error_date[1:]
+  logging.info("PROCESS END")
+  return output,error_date
