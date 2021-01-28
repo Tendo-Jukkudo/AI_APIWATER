@@ -165,6 +165,7 @@ class FractionsResource(Resource):
         date = request.args.get('date', default = '', type = str)
         index = request.args.get('index', default = '', type = str)
         logging.info("Request Predict Device:"+id_device)
+        logging.info("Request Predict Date:"+date)
 
         training_info_json_file = "model/about_model.json"
         path_id_device = 'model/'+id_device
@@ -173,16 +174,19 @@ class FractionsResource(Resource):
         if(check_id_device == False):
             return jsonify({"Device ID "+id_device+" not be trained"})
         else:
-            url_getdata = url_get+'&dev_id='+id_device+'&date='+date
-            url_getlink = url_csv+id_device+"/"
-            data_link = url_getlink+"datalink.json"
             try:
+                url_getdata = url_get+'&dev_id='+id_device+'&date='+date
+                url_getlink = url_csv+id_device+"/"
+                data_link = url_getlink+"datalink.json"
                 r = requests.get(data_link)
                 data_links = r.json()
+                sampling = data_links["sampling"]
+                row_datetime_name = data_links["rowname"][0]
+                row_pressure_name = data_links["rowname"][1]
+                row_flow_name = data_links["rowname"][2]
+                row_data = [row_datetime_name,row_pressure_name,row_flow_name]
             except:
                 return jsonify({'error':"Device ID does not exist"})
-
-            sampling = data_links["sampling"]
                 
             with open(training_info_json_file) as json_file: 
                 data = json.load(json_file)
@@ -249,11 +253,11 @@ class FractionsResource(Resource):
                             get_status['lout'] = lout
                         write_json(data,data_info_json_file)
 
-                forecast_flow,error_date = model_predict.run_prediction(type_feature=1,
+                forecast_flow,error_date = model_predict.run_prediction(type_feature=1,row_infor=row_data,
                                                                     his=lin,target=lout,
                                                                     path_weight=path_w_f,url_get=url_getdata,
                                                                     means=mean_value,f_ex=sampling,stds=std_value,mean_std=True)
-                forecast_p,error_date = model_predict.run_prediction(type_feature=0,
+                forecast_p,error_date = model_predict.run_prediction(type_feature=0,row_infor=row_data,
                                                                     his=lin,target=lout,
                                                                     path_weight=path_w_p,url_get=url_getdata,
                                                                     means=mean_value,f_ex=sampling,stds=std_value,mean_std=False)
