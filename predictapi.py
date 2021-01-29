@@ -61,7 +61,7 @@ def start_flaskapp(queue):
     global some_queue
     some_queue = queue
     API.add_resource(FractionsResource, "/")
-    serve(APP, host='0.0.0.0', port=8080, threads=2)
+    serve(APP, host='0.0.0.0', port=8080)
 
 def long_function():
     with ProcessPool(5) as pool:
@@ -172,7 +172,7 @@ class FractionsResource(Resource):
         check_id_device = os.path.exists(path_id_device)
 
         if(check_id_device == False):
-            return jsonify({"Device ID "+id_device+" not be trained"})
+            return jsonify({'error':"Device ID "+id_device+" not be trained"})
         else:
             try:
                 url_getdata = url_get+'&dev_id='+id_device+'&date='+date
